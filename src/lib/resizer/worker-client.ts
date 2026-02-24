@@ -1,6 +1,7 @@
 import type { OutputFormat, WorkerResult } from "@/types";
 
 let worker: Worker | null = null;
+const pendingRejects = new Set<(reason: Error) => void>();
 
 function getWorker(): Worker {
   if (!worker) {
@@ -19,17 +20,30 @@ export function resizeWithWorker(
     quality: number;
   }
 ): Promise<WorkerResult> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const w = getWorker();
 
-    const handler = (e: MessageEvent<WorkerResult>) => {
+    const cleanup = () => {
+      w.removeEventListener("message", onMessage);
+      w.removeEventListener("error", onError);
+      pendingRejects.delete(reject);
+    };
+
+    const onMessage = (e: MessageEvent<WorkerResult>) => {
       if (e.data.id === id) {
-        w.removeEventListener("message", handler);
+        cleanup();
         resolve(e.data);
       }
     };
 
-    w.addEventListener("message", handler);
+    const onError = (e: ErrorEvent) => {
+      cleanup();
+      reject(new Error(e.message || "Worker error"));
+    };
+
+    pendingRejects.add(reject);
+    w.addEventListener("message", onMessage);
+    w.addEventListener("error", onError);
 
     w.postMessage(
       {
@@ -48,4 +62,8 @@ export function terminateWorker() {
     worker.terminate();
     worker = null;
   }
+  for (const reject of pendingRejects) {
+    reject(new Error("Worker terminated"));
+  }
+  pendingRejects.clear();
 }

@@ -25,6 +25,13 @@ export function useResizer() {
     resultsRef.current = results;
   }, [results]);
 
+  // Revoke all blob URLs when the component unmounts
+  useEffect(() => {
+    return () => {
+      resultsRef.current.forEach((r) => URL.revokeObjectURL(r.previewUrl));
+    };
+  }, []);
+
   const optionsRef = useRef(options);
   useEffect(() => {
     optionsRef.current = options;
@@ -116,7 +123,9 @@ export function useResizer() {
     const a = document.createElement("a");
     a.href = processed.previewUrl;
     a.download = processed.name;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
   }, []);
 
   const downloadAll = useCallback(() => {
@@ -128,13 +137,15 @@ export function useResizer() {
         const a = document.createElement("a");
         a.href = result.previewUrl;
         a.download = result.name;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         if (current.length > 1) {
           await new Promise((r) => setTimeout(r, 200));
         }
       }
     };
-    download();
+    download().catch(() => {});
   }, []);
 
   const clearResults = useCallback(() => {
