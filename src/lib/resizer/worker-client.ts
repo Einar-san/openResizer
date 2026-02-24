@@ -4,7 +4,7 @@ let worker: Worker | null = null;
 
 function getWorker(): Worker {
   if (!worker) {
-    worker = new Worker(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/workers/resize.worker.js`);
+    worker = new Worker("workers/resize.worker.js");
   }
   return worker;
 }
