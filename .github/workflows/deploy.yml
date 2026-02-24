@@ -32,6 +32,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm run build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /openResizer
 
       - uses: actions/upload-pages-artifact@v3
         with:
